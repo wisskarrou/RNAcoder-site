@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RNAcoder · Token space explorer</title>
+<meta name="description" content="Interactive UMAPs of RNAcoder's all-atom tokens for RNA residues, base pairs and dinucleotides. Hover a point to see the structure decoded from its token.">
+<meta property="og:title" content="RNAcoder · Token space explorer">
+<meta property="og:description" content="Explore all-atom tokens of RNA residues, base pairs and dinucleotides, and see each one decoded back to 3D.">
+<meta property="og:image" content="assets/teaser.png">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d0d0d; --surface: #151515; --surface-2: #1c1c1c; --line: #2a2a2a;
+    --ink: #f2f2f2; --ink-2: #b9b9b9; --muted: #8a8a8a; --accent: #7cc4ff; --red: #ff5a5a; --green: #4fd36b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.55; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+  header.top { border-bottom: 1px solid var(--line); }
+  header.top .wrap { display: flex; align-items: center; gap: 16px; height: 56px; }
+  .brand { font-weight: 800; font-size: 1.15rem; color: var(--ink); text-decoration: none; }
+  .brand span { color: var(--accent); }
+  header.top nav { margin-left: auto; display: flex; gap: 18px; font-size: 0.92rem; }
+  header.top nav a { color: var(--ink-2); text-decoration: none; }
+  header.top nav a:hover { color: var(--ink); }
+  .hero { padding: 56px 0 28px; }
+  .eyebrow { color: var(--accent); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  h1 { font-size: clamp(1.9rem, 4.2vw, 3rem); line-height: 1.15; margin: 10px 0 14px; letter-spacing: -0.01em; max-width: 22ch; }
+  .lede { color: var(--ink-2); font-size: 1.1rem; max-width: 64ch; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; font-weight: 600; font-size: 0.95rem; text-decoration: none; }
+  .btn.primary { background: var(--accent); color: #0d0d0d; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.ghost { border: 1px solid var(--line); color: var(--ink); }
+  .btn.ghost:hover { background: var(--surface-2); }
+  .teaser { margin: 34px 0 8px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: block; }
+  .teaser img { width: 100%; display: block; }
+  h2 { font-size: 1.45rem; margin: 52px 0 6px; }
+  .sub { color: var(--muted); margin-bottom: 20px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; text-decoration: none; color: var(--ink); display: flex; flex-direction: column; transition: transform .15s ease, border-color .15s ease; }
+  .card:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .card img { width: 100%; aspect-ratio: 10 / 7; object-fit: cover; display: block; border-bottom: 1px solid var(--line); }
+  .card .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .card h3 { font-size: 1.12rem; }
+  .card p { color: var(--ink-2); font-size: 0.93rem; flex: 1; }
+  .card .meta { color: var(--muted); font-size: 0.82rem; }
+  .card .go { color: var(--accent); font-weight: 600; font-size: 0.92rem; }
+  .how { display: grid; grid-template-columns: 1.1fr 1fr; gap: 26px; align-items: center; }
+  .how ol { padding-left: 1.2em; color: var(--ink-2); display: grid; gap: 10px; }
+  .how ol b { color: var(--ink); }
+  .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: baseline; }
+  .render { background: #fff; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+  .render img { width: 100%; display: block; }
+  .render figcaption { background: var(--surface); color: var(--muted); font-size: 0.85rem; padding: 10px 14px; }
+  pre { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; overflow-x: auto; font-size: 0.88rem; color: var(--ink-2); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding: 26px 0 40px; color: var(--muted); font-size: 0.88rem; }
+  @media (max-width: 860px) { .cards { grid-template-columns: 1fr; } .how { grid-template-columns: 1fr; } header.top nav a.hide-sm { display: none; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./">RNA<span>coder</span></a>
+    <nav>
+      <a href="residues/">Residues</a>
+      <a href="base-pairs/">Base pairs</a>
+      <a href="dinucleotides/">Dinucleotides</a>
+      <a class="hide-sm" href="https://github.com/wisskarrou/RNAcoder">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow">Token space explorer</div>
+    <h1>See what an all-atom RNA token knows.</h1>
+    <p class="lede">RNAcoder turns every residue, base pair and dinucleotide of an RNA 3D structure into a compact token, learned by autoencoders that must rebuild all atoms from it. Browse the three token spaces of the pretrained encoders and see any token decoded back into 3D.</p>
+    <div class="cta">
+      <a class="btn primary" href="base-pairs/">Explore base pairs →</a>
+      <a class="btn ghost" href="https://github.com/wisskarrou/RNAcoder">Get the code &amp; pretrained encoders</a>
+    </div>
+    <a class="teaser" href="base-pairs/"><img src="assets/teaser.png" alt="UMAPs of RNAcoder tokens: base pairs cluster by Leontis–Westhof family, residues by residue type, dinucleotides by nucleotide pair."></a>
+  </section>
+
+  <h2>Pick a token space</h2>
+  <p class="sub">Points are held-out PDB structures that the encoders never saw during training. Switch the colouring from the menu at the top of each explorer.</p>
+  <div class="cards">
+    <a class="card" href="residues/">
+      <img src="assets/residues.png" alt="UMAP of residue tokens coloured by residue type" loading="lazy">
+      <div class="body">
+        <h3>Residues</h3>
+        <p>One token per nucleotide, standard or modified, computed from its own heavy atoms only.</p>
+        <div class="meta">32-d tokens · 1,205 residues · colour by residue type, secondary structure, RNA type</div>
+        <div class="go">Open explorer →</div>
+      </div>
+    </a>
+    <a class="card" href="base-pairs/">
+      <img src="assets/base-pairs.png" alt="UMAP of base-pair tokens coloured by Leontis–Westhof family" loading="lazy">
+      <div class="body">
+        <h3>Base pairs</h3>
+        <p>One token per base pair, from the heavy atoms of its two residues. The 18 Leontis–Westhof families separate, although the encoder is never trained to predict them.</p>
+        <div class="meta">64-d tokens · 5,360 pairs · colour by LW family, nucleotide pair, RNA type</div>
+        <div class="go">Open explorer →</div>
+      </div>
+    </a>
+    <a class="card" href="dinucleotides/">
+      <img src="assets/dinucleotides.png" alt="UMAP of dinucleotide tokens coloured by nucleotide pair" loading="lazy">
+      <div class="body">
+        <h3>Dinucleotides</h3>
+        <p>One token per dinucleotide (two consecutive nucleotides), from the heavy atoms of both residues.</p>
+        <div class="meta">64-d tokens · 2,008 dinucleotides · colour by nucleotide pair, secondary structure, RNA type</div>
+        <div class="go">Open explorer →</div>
+      </div>
+    </a>
+  </div>
+
+  <h2>How to read the explorers</h2>
+  <div class="how">
+    <ol>
+      <li><b>Each point is one token.</b> Its position comes from a UMAP of the token vectors; nearby points have similar local all-atom geometry.</li>
+      <li><b>Hover a point</b> to see the structure the decoder rebuilds from that token alone, <span class="legend-dot" style="background:var(--red)"></span><b style="color:var(--red)">red</b>, over the input structure, <span class="legend-dot" style="background:var(--green)"></span><b style="color:var(--green)">green</b>.</li>
+      <li><b>Click</b> to pin a point, and follow the link to its PDB entry.</li>
+      <li><b>Change the colouring</b> to check which properties the token space organises by.</li>
+    </ol>
+    <figure class="render">
+      <img src="base-pairs/renders/8ztv.A.1139_8ztv.A.1142.webp" alt="A base pair decoded from its token (red) overlaid on the input structure (green)" loading="lazy">
+      <figcaption>A base pair decoded from its 64-d token (red) over the input (green).</figcaption>
+    </figure>
+  </div>
+
+  <h2>Use the tokens in your own work</h2>
+  <p class="sub">Encode your own mmCIF files with the pretrained encoders and use the tokens as node and edge features of a graph neural network.</p>
+  <pre><code>git clone https://github.com/wisskarrou/RNAcoder.git &amp;&amp; cd RNAcoder
+bash setup_env.sh &amp;&amp; conda activate rnacoder
+# then follow "Quickstart: tokens for your own structures" in the README</code></pre>
+</main>
+
+<footer>
+  <div class="wrap">
+    RNAcoder: Tokenizing RNA Structure with Local All-Atom Autoencoders · Karroucha &amp; Mallet · MIT License · <a href="https://github.com/wisskarrou/RNAcoder">github.com/wisskarrou/RNAcoder</a>
+  </div>
+</footer>
+</body>
+</html>
